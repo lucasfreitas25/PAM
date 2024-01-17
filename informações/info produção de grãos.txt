@@ -1,0 +1,16 @@
+Algodão
+Amendoim 
+Arroz
+Café
+Feijão
+Girassol
+Milho
+Soja
+Sorgo
+Trigo
+
+8331 - Área plantada ou destinada à colheita
+216 - Área colhida
+214 - Quantidade produzida
+112 - Rendimento médio da produção
+
