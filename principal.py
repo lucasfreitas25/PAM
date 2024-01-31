@@ -4,14 +4,13 @@ import pprint
 import sqlite3
 from localidades import nacional, estadual, municipal
 import ssl
-# import gspread
 from Google import Create_Service
 from googleapiclient.http import MediaFileUpload
 import openpyxl
-import json
+from openpyxl.styles import Font, Border, Side
+from ajustar_planilha import ajustar_colunas, ajustar_bordas
 
 api_nacional =  f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{nacional}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
-
 api_estadual = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{estadual}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
 
 #api_municipal = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2020|2021|2022/variaveis/8331|216|214|112|215?{municipal}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
@@ -126,7 +125,10 @@ def gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dad
     dataframe = pd.merge(df8331, df216, on=['id', 'nome', 'id_produto', 'produto', 'ano'], how='inner')
     dataframe = pd.merge(dataframe, df214, on=['id', 'nome', 'id_produto', 'produto', 'ano'], how='inner')
     dataframe = pd.merge(dataframe, df112, on=['id', 'nome', 'id_produto', 'produto', 'ano'], how='inner')
- 
+    dataframe['Área plantada ou destinada à colheita'] = dataframe['Área plantada ou destinada à colheita'].astype(float)
+    dataframe['Área colhida'] = dataframe['Área colhida'].astype(float)
+    dataframe['Quantidade produzida'] = dataframe['Quantidade produzida'].astype(float)
+    dataframe['Rendimento médio da produção'] = dataframe['Rendimento médio da produção'].astype(float)
     return dataframe
 
 def coluna_cultura(dataframe):
@@ -157,6 +159,7 @@ dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratan
 dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
 df5457_nacional = coluna_cultura(dataframe)
 df5457_nacional.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx', index=False)
+df5457_nacional.to_html('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\CHATBOT\\Banco de dados Bot\\PAM 5457_NACIONAL.html', index=False)
 #print(df5457_nacional)
 
 
@@ -166,6 +169,7 @@ dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratan
 dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
 df5457_estadual = coluna_cultura(dataframe)
 df5457_estadual.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx', index=False)
+df5457_estadual.to_html('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\CHATBOT\\Banco de dados Bot\\PAM_5457_ESTADUAL.html', index=False)
 #print(df5457_estadual)
 
 '''
@@ -186,19 +190,11 @@ wb_5457_estadual = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\L
 ws_5457_nacional = wb_5457_nacional.active
 ws_5457_estadual = wb_5457_estadual.active
 
-colunas_para_ajustar = ['B', 'C', 'D', 'F', 'G', 'J']
-largura_desejada = 22
-
-for coluna in colunas_para_ajustar:
-    ws_5457_nacional.column_dimensions[coluna].width = largura_desejada
-    ws_5457_estadual.column_dimensions[coluna].width = largura_desejada
-
-colunas_maiores = ['E', 'H', 'I']
-largura_planejada = 35
-
-for coluna in colunas_maiores:
-    ws_5457_nacional.column_dimensions[coluna].width = largura_planejada
-    ws_5457_estadual.column_dimensions[coluna].width = largura_planejada
+lista_ws = [ws_5457_nacional, ws_5457_estadual]
+lista_wb = [wb_5457_nacional, wb_5457_estadual]
+for ws, wb in zip(lista_ws, lista_wb):
+    ajustar_colunas(ws)
+    ajustar_bordas(wb)
 
 wb_5457_nacional.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx")
 wb_5457_estadual.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx")
@@ -225,6 +221,7 @@ for aba in planilha_principal.sheetnames:
     if aba not in ["PAM 5457 NACIONAL", "PAM 5457 ESTADUAL"]:
         del planilha_principal[aba]
 
+
 colunas_para_ajustar = ['B', 'C', 'D', 'F', 'G', 'J']
 largura_desejada = 22
 
@@ -239,9 +236,20 @@ for coluna in colunas_maiores:
     aba_5457_nacional.column_dimensions[coluna].width = largura_planejada
     aba_5457_estadual.column_dimensions[coluna].width = largura_planejada
 
+
 planilha_principal.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM.xlsx")
+worksheet = planilha_principal.active
+df = pd.read_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM.xlsx')
 
+for sheet_name in planilha_principal.sheetnames:
+    worksheet = planilha_principal[sheet_name]
+    
+    for col_num in range(1, worksheet.max_column + 1):
+        cell = worksheet.cell(row=1, column=col_num)
+        cell.font = Font(bold=True)
+        cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
 
+planilha_principal.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM.xlsx")
 
 #Faz autenticação do google drive para jogar os arquivos gerados no codigo python
 CLIENT_SECRET_FILE = 'credencials.json'
@@ -255,7 +263,6 @@ service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 file_id = "1KSR_XbhD-SEL9Wpu-f8SEZT0ETGhGeLb"
 FILE_NAMES = ["PAM_5457_NACIONAL.xlsx", "PAM_5457_ESTADUAL.xlsx"]
 MIME_TYPES = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
-
 
 #LISTA TODOS OS ARQUIVO DENTRO DA PASTA
 def listar_arquivos():
