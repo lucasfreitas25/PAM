@@ -1,7 +1,6 @@
+from pathlib import Path
 import pandas as pd
 import requests as rq 
-import pprint
-import sqlite3
 from localidades import nacional, estadual, municipal
 import ssl
 from Google import Create_Service
@@ -9,12 +8,12 @@ from googleapiclient.http import MediaFileUpload
 import openpyxl
 from openpyxl.styles import Font, Border, Side
 from ajustar_planilha import ajustar_colunas, ajustar_bordas
+from Drive import add_arquivos_a_pasta, obter_id_do_arquivo, listar_arquivos
 
 api_nacional =  f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{nacional}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
 api_estadual = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{estadual}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
-
 #api_municipal = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2020|2021|2022/variaveis/8331|216|214|112|215?{municipal}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
-
+ROOT_PATH = Path(__file__).parent
 
 class TLSAdapter(rq.adapters.HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
@@ -52,8 +51,6 @@ def requisitando_dados(api):
     dados_brutos_112 = dados_brutos[3]
 
     return dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112
-
-
 
 def tratando_dados(dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112 ):
     dados_limpos_8331 = []
@@ -172,17 +169,6 @@ df5457_estadual.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arqu
 df5457_estadual.to_html('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\CHATBOT\\Banco de dados Bot\\PAM_5457_ESTADUAL.html', index=False)
 #print(df5457_estadual)
 
-'''
-#PARTE MUNICIPAL
-dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112 = requisitando_dados(api_municipal)
-dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratando_dados(dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112)
-dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
-df5457_municipal = coluna_cultura(dataframe)
-print(df5457_municipal)
-df5457_estadual.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\PAM\\Tabelas em csv\\PAM_5457_MUNICIPAL.xlsx', index=False)
-
-'''
-
 # CARREGA A PLANILHA DO PAM 5457 E FAZ AS ALTERAÇÕES ESTRUTURAIS DA PLANILHA
 wb_5457_nacional = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx")  
 wb_5457_estadual = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx")  
@@ -261,54 +247,10 @@ service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
 #PASSA O PAM PARA O DRIVE
 file_id = "1KSR_XbhD-SEL9Wpu-f8SEZT0ETGhGeLb"
-FILE_NAMES = ["PAM_5457_NACIONAL.xlsx", "PAM_5457_ESTADUAL.xlsx"]
-MIME_TYPES = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
+FILE_NAMES = ["PAM_5457_NACIONAL.xlsx", "PAM_5457_ESTADUAL.xlsx", "PAM.xlsx"]
+MIME_TYPES = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
 
-#LISTA TODOS OS ARQUIVO DENTRO DA PASTA
-def listar_arquivos():
-    results = service.files().list(
-        q=f"trashed=false and '{file_id}' in parents",
-        spaces='drive',
-        pageSize=10,  # Ajuste o valor conforme necessário
-        fields="nextPageToken, files(id, name, createdTime)"
-    ).execute()
-    items = results.get('files', [])
-    items_sorted = sorted(items, key=lambda x: x['createdTime']) 
-    return items_sorted
-
-def obter_id_do_arquivo(file_name):
-    items = listar_arquivos()
-    for item in items:
-        if item['name'] == file_name:
-            return item['id']
-    return None 
-    
-
-#ADICIONA TODOS OS ARQUIVOS NA PASTA
-for file_name, mime_type in zip(FILE_NAMES, MIME_TYPES):
-    id_arquivo = obter_id_do_arquivo(file_name)
-
-    if id_arquivo:
-        # O arquivo já existe, então atualizamos
-        media_replace = MediaFileUpload("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\{0}".format(file_name), mimetype=mime_type)
-        service.files().update(
-            fileId=id_arquivo,
-            media_body=media_replace
-        ).execute()
-        print(f"Documento '{file_name}' atualizado")
-    else:
-        file_metadata = {
-            "name": file_name,
-            "parents": [file_id]
-        }
-        media = MediaFileUpload("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\{0}".format(file_name), mimetype=mime_type)
-
-        service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields="id"
-        ).execute()
-        print(f"Arquivo '{file_name}' criado")
+add_arquivos_a_pasta(FILE_NAMES, MIME_TYPES, service, file_id)
 
 
 '''
