@@ -4,13 +4,12 @@ import requests as rq
 from localidades import nacional, estadual, municipal
 import ssl
 from Google import Create_Service
-from googleapiclient.http import MediaFileUpload
 import openpyxl
 from openpyxl.styles import Font, Border, Side
 from ajustar_planilha import ajustar_colunas, ajustar_bordas
-from Drive import add_arquivos_a_pasta, obter_id_do_arquivo, listar_arquivos
+from Drive import add_arquivos_a_pasta
 
-api_nacional =  f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{nacional}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
+
 api_estadual = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2013|2014|2015|2016|2017|2018|2019|2020|2021|2022/variaveis/8331|216|214|112?{estadual}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
 #api_municipal = f'https://servicodados.ibge.gov.br/api/v3/agregados/5457/periodos/2020|2021|2022/variaveis/8331|216|214|112|215?{municipal}&classificacao=782[40092,45982,40099,40101,40102,40136,40104,40137,40138,40139,40106,40143,40145,40112,40114,40149,40150,40151,40152,40261,40118,40119,40262,40263,40120,40121,40122,40266,40269,40124,40125,40271,40126,40127,40273,40274]'
 ROOT_PATH = Path(__file__).parent
@@ -150,61 +149,40 @@ def coluna_cultura(dataframe):
     return dataframe
 
 
-#PARTE NACIONAL
-dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112 = requisitando_dados(api_nacional)
-dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratando_dados(dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112)
-dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
-df5457_nacional = coluna_cultura(dataframe)
-df5457_nacional.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx', index=False)
-df5457_nacional.to_html('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\CHATBOT\\Banco de dados Bot\\PAM 5457_NACIONAL.html', index=False)
-#print(df5457_nacional)
-
-
 #PARTE ESTADUAL
 dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112 = requisitando_dados(api_estadual)
 dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratando_dados(dados_brutos_8331, dados_brutos_216, dados_brutos_214, dados_brutos_112)
 dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
 df5457_estadual = coluna_cultura(dataframe)
 df5457_estadual.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx', index=False)
-df5457_estadual.to_html('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\CHATBOT\\Banco de dados Bot\\PAM_5457_ESTADUAL.html', index=False)
 #print(df5457_estadual)
 
 # CARREGA A PLANILHA DO PAM 5457 E FAZ AS ALTERAÇÕES ESTRUTURAIS DA PLANILHA
-wb_5457_nacional = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx")  
+
 wb_5457_estadual = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx")  
 
-ws_5457_nacional = wb_5457_nacional.active
 ws_5457_estadual = wb_5457_estadual.active
 
-lista_ws = [ws_5457_nacional, ws_5457_estadual]
-lista_wb = [wb_5457_nacional, wb_5457_estadual]
+lista_ws = [ws_5457_estadual]
+lista_wb = [wb_5457_estadual]
 for ws, wb in zip(lista_ws, lista_wb):
     ajustar_colunas(ws)
     ajustar_bordas(wb)
 
-wb_5457_nacional.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx")
 wb_5457_estadual.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx")
-
 
 #TESTANDO JUNTAR TODAS PLANILHAS EM UMA SÓ
 planilha_principal = openpyxl.Workbook()
-
-wb_5457_nacional = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_NACIONAL.xlsx")  
 wb_5457_estadual = openpyxl.load_workbook("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx")  
-
-aba_5457_nacional = planilha_principal.create_sheet("PAM 5457 NACIONAL")
 aba_5457_estadual = planilha_principal.create_sheet("PAM 5457 ESTADUAL")
 
-# Copiar os dados da primeira planilha para a nova planilha
-for linha in wb_5457_nacional.active.iter_rows(values_only=True):
-    aba_5457_nacional.append(linha)
 
 # Copiar os dados da segunda planilha para a nova planilha
 for linha in wb_5457_estadual.active.iter_rows(values_only=True):
     aba_5457_estadual.append(linha)
 
 for aba in planilha_principal.sheetnames:
-    if aba not in ["PAM 5457 NACIONAL", "PAM 5457 ESTADUAL"]:
+    if aba not in ["PAM 5457 ESTADUAL"]:
         del planilha_principal[aba]
 
 
@@ -212,14 +190,12 @@ colunas_para_ajustar = ['B', 'C', 'D', 'F', 'G', 'J']
 largura_desejada = 22
 
 for coluna in colunas_para_ajustar:
-    aba_5457_nacional.column_dimensions[coluna].width = largura_desejada
     aba_5457_estadual.column_dimensions[coluna].width = largura_desejada
 
 colunas_maiores = ['E', 'H', 'I']
 largura_planejada = 35
 
 for coluna in colunas_maiores:
-    aba_5457_nacional.column_dimensions[coluna].width = largura_planejada
     aba_5457_estadual.column_dimensions[coluna].width = largura_planejada
 
 
@@ -237,6 +213,7 @@ for sheet_name in planilha_principal.sheetnames:
 
 planilha_principal.save("C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM.xlsx")
 
+'''
 #Faz autenticação do google drive para jogar os arquivos gerados no codigo python
 CLIENT_SECRET_FILE = 'credencials.json'
 API_NAME = 'drive'
@@ -251,12 +228,11 @@ FILE_NAMES = ["PAM_5457_NACIONAL.xlsx", "PAM_5457_ESTADUAL.xlsx", "PAM.xlsx"]
 MIME_TYPES = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
 
 add_arquivos_a_pasta(FILE_NAMES, MIME_TYPES, service, file_id)
-
-
 '''
+
+
 #ABRE O ARQUIVO SQL.PY E EXECUTA TODOS OS COMANDOS DENTRO DELE
 if __name__ == '__main__':
     from sql import executar_sql 
     executar_sql()
 
-'''
