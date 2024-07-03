@@ -155,6 +155,7 @@ dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112 = tratan
 dataframe = gerando_dataframe(dados_limpos_8331, dados_limpos_216, dados_limpos_214, dados_limpos_112)
 df5457_estadual = coluna_cultura(dataframe)
 df5457_estadual.to_excel('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.xlsx', index=False)
+df5457_estadual.to_csv('C:\\Users\\LucasFreitas\\Documents\\Lucas Freitas Arquivos\\DATAHUB\\TABELAS\\TABELAS EM CSV\\PAM_5457_ESTADUAL.csv', index=False)
 #print(df5457_estadual)
 
 # CARREGA A PLANILHA DO PAM 5457 E FAZ AS ALTERAÇÕES ESTRUTURAIS DA PLANILHA
